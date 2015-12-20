@@ -8,7 +8,7 @@
     int $T_SYSCALL; \
     ret
 
-# syscall.h$B$K(B$SYS_fork, $SYS_exit$BEy$NHV9f$ODj5A$5$l$F$$$k(B
+# syscall.hに$SYS_fork, $SYS_exit等の番号は定義されている
 SYSCALL(fork)
 SYSCALL(exit)
 SYSCALL(wait)

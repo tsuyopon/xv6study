@@ -75,11 +75,11 @@ main(int argc, char *argv[])
 {
   int i;
 
-  if(argc < 2){          // ls$B$K0z?t$,;XDj$5$l$F$$$J$1$l$P8=:_%G%#%l%/%H%j$N%U%!%$%k$rI=<($7$F=*N;(B
+  if(argc < 2){          // 引数がなければカレントディレクトリをlsして終了
     ls(".");   
     exit();
   }
-  for(i=1; i<argc; i++)  // $B0z?t$,;XDj$5$l$F$$$kJ,$@$1(Bls$B$r<B9T$7$F=*N;(B
+  for(i=1; i<argc; i++)  // 引数があればその個数分だけlsを実行して終了
     ls(argv[i]);
   exit();
 }

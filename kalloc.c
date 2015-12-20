@@ -22,7 +22,7 @@ struct {
   struct run *freelist;
 } kmem;
 
-// $B;29M(B: http://yshigeru.blogspot.jp/2011/12/xv6.html
+// 参考: http://yshigeru.blogspot.jp/2011/12/xv6.html
 //
 // Initialization happens in two phases.
 // 1. main() calls kinit1() while still using entrypgdir to place just
@@ -32,7 +32,7 @@ struct {
 void
 kinit1(void *vstart, void *vend)
 {
-  // kmem$B$N%m%C%/=i4|2=(B
+  // kmemのロック初期化
   initlock(&kmem.lock, "kmem");
   kmem.use_lock = 0;
   freerange(vstart, vend);
@@ -45,11 +45,11 @@ kinit2(void *vstart, void *vend)
   kmem.use_lock = 1;
 }
 
-// end$B!A(B4MB$B$^$G$NJ*M}%"%I%l%96u4V$r(B4KB$B$N%Z!<%8$KJ,3d$7!"%U%j!<%j%9%H$KEPO?$9$k!#$3$N=hM}$r9T$&$N$,!"(Bfreerange$B4X?t$H(Bkfree$B4X?t$G$"$k!#(B
+// end〜4MBまでの物理アドレス空間を4KBのページに分割し、フリーリストに登録する。この処理を行うのが、freerange関数とkfree関数である。
 void
 freerange(void *vstart, void *vend)
 {
-  // $B0z?t(Bvstart$B$H(Bvend$B$GEO$5$l$?2>A[%"%I%l%96u4V!JHO0O!K$K$D$$$F(BPGSIZE(4KB)$B$4$H$K(Bkfree$B4X?t$r8F$S=P$9(B
+  // 引数vstartとvendで渡された仮想アドレス空間（範囲）についてPGSIZE(4KB)ごとにkfree関数を呼び出す
   char *p;
   p = (char*)PGROUNDUP((uint)vstart);
   for(; p + PGSIZE <= (char*)vend; p += PGSIZE)
@@ -66,24 +66,24 @@ kfree(char *v)
 {
   struct run *r;
 
-  // $B%Z!<%86-3&$K9g$C$F$J$$(B $BKt$O(B end$B$h$j$b>.$5$$(B $BKt$O(B v2p(v)$B$,(BPHYSTOP$B0J>e$G$"$k(B
+  // ページ境界に合ってない 又は endよりも小さい 又は v2p(v)がPHYSTOP以上である
   if((uint)v % PGSIZE || v < end || v2p(v) >= PHYSTOP)
     panic("kfree");
 
-  // v$B$+$i(B1$B%Z!<%8J,!"%a%b%jNN0h$r(B1$B$GKd$a$k(B
+  // vから1ページ分、メモリ領域を1で埋める
   // Fill with junk to catch dangling refs.
   memset(v, 1, PGSIZE);
 
-  // $B%m%C%/3+;O(B
+  // ロック開始
   if(kmem.use_lock)
     acquire(&kmem.lock);
 
-  // v$B$r%U%j!<%j%9%H$K$D$J$0(B
+  // vをフリーリストにつなぐ
   r = (struct run*)v;
   r->next = kmem.freelist;
   kmem.freelist = r;
 
-  // $B%m%C%/=*N;(B
+  // ロック終了
   if(kmem.use_lock)
     release(&kmem.lock);
 }

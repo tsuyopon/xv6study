@@ -85,7 +85,6 @@ getcallerpcs(void *v, uint pcs[])
 int
 holding(struct spinlock *lock)
 {
-  // $B%m%C%/$7$F$$$F!"$+$D$=$N%m%C%/$7$F$$$k(BCPU$B$,<B9TCf$N$b$N$G$"$l$P(Btrue$B$rJV5Q$9$k(B
   return lock->locked && lock->cpu == cpu;
 }
 
@@ -102,7 +101,7 @@ pushcli(void)
   eflags = readeflags();
   cli();
   if(cpu->ncli++ == 0)
-    cpu->intena = eflags & FL_IF;  // FLAGS$B%l%8%9%?$N(BIF$B%S%C%H$,N)$C$F$$$?$i(B(Interrupt Enable$B$J$i$P(B)$B$I$&$+$NO@M}OB(B
+    cpu->intena = eflags & FL_IF;  // FLAGSレジスタのIF(割り込み可能フラグ)があるかをチェック
 }
 
 void
