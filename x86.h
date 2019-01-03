@@ -64,6 +64,8 @@ stosl(void *addr, int data, int cnt)
 
 struct segdesc;
 
+// GDTR(Global Discriptor Table Register)に論理アドレスから物理アドレスへのマッピングの先頭アドレスを格納する。
+// このために使う命令がlgdt命令である。
 static inline void
 lgdt(struct segdesc *p, int size)
 {
