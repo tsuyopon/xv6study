@@ -81,12 +81,16 @@ void
 userinit(void)
 {
   struct proc *p;
+  // 以下の _binary_<objfile>_startや_binary_<objfile_sizeなどは特別なシンボルとされる。以下を参照のこと
+  // - (参考) binutils - kernel - “_binary” meaning?
+  //   - https://stackoverflow.com/questions/29034840/binutils-kernel-binary-meaning
   extern char _binary_initcode_start[], _binary_initcode_size[];
   
   p = allocproc();
   initproc = p;
   if((p->pgdir = setupkvm()) == 0)
     panic("userinit: out of memory?");
+
   inituvm(p->pgdir, _binary_initcode_start, (int)_binary_initcode_size);
   p->sz = PGSIZE;
   memset(p->tf, 0, sizeof(*p->tf));
@@ -285,7 +289,7 @@ scheduler(void)
       proc = p;
       switchuvm(p);
       p->state = RUNNING;
-      swtch(&cpu->scheduler, proc->context);
+      swtch(&cpu->scheduler, proc->context);  // swtch.S 内にこの関数swtchが定義されている
       switchkvm();
 
       // Process is done running for now.

@@ -21,7 +21,10 @@ tvinit(void)
 
   for(i = 0; i < 256; i++)
     SETGATE(idt[i], 0, SEG_KCODE<<3, vectors[i], 0);  // ここで定義されるvectorsはvectors.Sで定義されているようだ
-  SETGATE(idt[T_SYSCALL], 1, SEG_KCODE<<3, vectors[T_SYSCALL], DPL_USER);
+
+  // システムコールで80だけ上書きされる。この場合上記と違って第２引数と第４引数が異なる。
+  // 第２引数はtrapであることを示していて、第３引数は特権レベルを指定するDPL_USER=3(アプリケーション)となっている。
+  SETGATE(idt[T_SYSCALL], 1, SEG_KCODE<<3, vectors[T_SYSCALL], DPL_USER);  // T_SYSCALLは16進数で64なので、10進数で80である。
   
   initlock(&tickslock, "time");
 }
@@ -102,6 +105,7 @@ trap(struct trapframe *tf)
 
   // Force process to give up CPU on clock tick.
   // If interrupts were on while locks held, would need to check nlock.
+  // 実行しているプロセスのCPU利用時間がIRQ Timerで指定されていた時間で検知されたので、別のプロセスへとスイッチする。
   if(proc && proc->state == RUNNING && tf->trapno == T_IRQ0+IRQ_TIMER)
     yield();
 
