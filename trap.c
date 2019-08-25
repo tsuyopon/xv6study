@@ -39,11 +39,13 @@ idtinit(void)
 void
 trap(struct trapframe *tf)
 {
+
+  // システムコール経由のinteruptの場合
   if(tf->trapno == T_SYSCALL){
     if(proc->killed)
       exit();
     proc->tf = tf;
-    syscall();
+    syscall();           // ここでシステムコールを実行
     if(proc->killed)
       exit();
     return;

@@ -47,9 +47,22 @@ bootmain(void)
   entry();
 }
 
+// 命令の送受信が可能になるまで待機する(これを待たないとハングアップする可能性がある)
 void
 waitdisk(void)
 {
+  // https://wiki.osdev.org/ATA_PIO_Mode#Primary.2FSecondary_Bus
+  // 0x1F7: Status Register
+  // - 0   ERR Indicates an error occurred. Send a new command to clear it (or nuke it with a Software Reset).
+  // - 1   IDX Index. Always set to zero.
+  // - 2   CORR    Corrected data. Always set to zero.
+  // - 3   DRQ Set when the drive has PIO data to transfer, or is ready to accept PIO data.
+  // - 4   SRV Overlapped Mode Service Request.
+  // - 5   DF  Drive Fault Error (does not set ERR).
+  // - 6   RDY Bit is clear when drive is spun down, or after an error. Set otherwise.
+  // - 7   BSY Indicates the drive is preparing to send/receive data (wait for it to clear). In case of 'hang' (it never clears), do a software reset.
+  //
+  // 0xC0: 命令の送受信が可能どうか。
   // Wait for disk ready.
   while((inb(0x1F7) & 0xC0) != 0x40)
     ;
