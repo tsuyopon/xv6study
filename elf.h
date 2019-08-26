@@ -3,19 +3,20 @@
 #define ELF_MAGIC 0x464C457FU  // "\x7FELF" in little endian
 
 // File header
+// 参考: http://softwaretechnique.jp/OS_Development/Tips/ELF/elf01.html
 struct elfhdr {
   uint magic;  // must equal ELF_MAGIC
   uchar elf[12];
   ushort type;
-  ushort machine;
+  ushort machine;   // オブジェクトファイルに必要なアーキテクチャを指定する。
   uint version;
-  uint entry;
-  uint phoff;
+  uint entry;       // OSがプロセスを実行するときに最初に実行する仮想アドレスが記録される。
+  uint phoff;       // オブジェクトファイルに格納されているプログラムヘッダテーブルのオフセットが記録されています。
   uint shoff;
   uint flags;
-  ushort ehsize;
+  ushort ehsize;    // ELFヘッダのサイズが格納されます
   ushort phentsize;
-  ushort phnum;
+  ushort phnum;     // プログラムヘッダーテーブルのエントリー数が記録される。
   ushort shentsize;
   ushort shnum;
   ushort shstrndx;

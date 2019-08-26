@@ -22,12 +22,13 @@ bootmain(void)
   void (*entry)(void);
   uchar* pa;
 
+  // 0x10000という値をelf先頭に指定する。(この0x10000という値は、何か意味があるわけではなさそうだったので、固定値か!?)
   elf = (struct elfhdr*)0x10000;  // scratch space
 
   // Read 1st page off disk
-  readseg((uchar*)elf, 4096, 0);
+  readseg((uchar*)elf, 4096, 0);  // 4096 (=0x1000)を意味する。つまり、elfファイルの先頭をディスク上から0x10000〜0x11000番地までのメモリに読み込む
 
-  // Is this an ELF executable?
+  // Is this an ELF executable? ELFの最初のヘッダ情報があるかどうかをチェックする
   if(elf->magic != ELF_MAGIC)
     return;  // let bootasm.S handle error
 
@@ -43,8 +44,18 @@ bootmain(void)
 
   // Call the entry point from the ELF header.
   // Does not return!
-  entry = (void(*)(void))(elf->entry);
+  entry = (void(*)(void))(elf->entry);    // ここで
   entry();
+
+  // 上記の (void(*)(void))は何を意味しているのか?
+  //   参考: https://stackoverflow.com/questions/20357106/what-does-c-expression-voidvoid0-mean
+  // 上記を参考にすると
+  //   void f(void);     これは引数無し、戻り値無しの関数を意味する。
+  //   void (*p)(void);  これは引数無し、戻り値無しの関数ポインタを意味する。
+  //   void (*)(void);   これは上記ポインタへの型を表す。
+  //   (void (*)(void)); これは上記ポインタをカッコで囲んだだけ
+  //   (void(*)(void));  voidの後のスペースを詰めただけ
+  //   つまり、(void(*)(void))というのは、「void f(void)」への関数ポインタの型を表している
 }
 
 void

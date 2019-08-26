@@ -118,7 +118,7 @@ main(void)
   if(!ismp)
     timerinit();   // uniprocessor timer
 
-  // 起動時に利用したプロセッサ以外の他のプロセッサを開始する
+  // 起動時に利用したプロセッサ以外の他のプロセッサを開始する(最初は1つのプロセッサしか起動しないので...)
   startothers();   // start other processors
 
   // 4MBからPHYSTOPまでの物理アドレス空間を、フリーリストに登録する。
