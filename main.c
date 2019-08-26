@@ -87,10 +87,12 @@ main(void)
   // CPU数の出力
   cprintf("\ncpu%d: starting xv6\n\n", cpu->id);
 
+  // 8259Aの割り込みコントローラの初期化
   picinit();       // interrupt controller
+
   ioapicinit();    // another interrupt controller
 
-  // コンソールに関する初期化処理の設定
+  // コンソールに関する初期化処理の設定(ロック周りの初期化、コンソールに読み書き関数のセット、キーボード割り込み有効)
   consoleinit();   // I/O devices & their interrupts
   
   // UART(8250 Universal Asynchronous Receiver/Transmitterの略称) => http://ja.wikipedia.org/wiki/UART
@@ -112,9 +114,10 @@ main(void)
   // icacheのロック初期化
   iinit();         // inode cache
 
-  // 
+  // IDEの初期化
   ideinit();       // disk
 
+  // ユニプロセッサ環境の場合のみtimerinit()が呼ばれてタイマ割り込みを受けるための準備が入る
   if(!ismp)
     timerinit();   // uniprocessor timer
 
@@ -124,8 +127,11 @@ main(void)
   // 4MBからPHYSTOPまでの物理アドレス空間を、フリーリストに登録する。
   kinit2(P2V(4*1024*1024), P2V(PHYSTOP)); // must come after startothers()
 
+  // 最初のプロセスの初期化処理を行う
+  // initcode.Sの内容をロードして、各種レジスタ周りの初期化を行なっている。
   userinit();      // first user process
 
+  // このプロセッサのセッティングを終了して、スケジューラを開始する。
   // Finish setting up this processor in mpmain.
   mpmain();
 }
@@ -145,9 +151,9 @@ static void
 mpmain(void)
 {
   cprintf("cpu%d: starting\n", cpu->id);
-  idtinit();       // load idt register
+  idtinit();              // load idt register
   xchg(&cpu->started, 1); // tell startothers() we're up
-  scheduler();     // start running processes
+  scheduler();            // start running processes
 }
 
 pde_t entrypgdir[];  // For entry.S
@@ -167,6 +173,7 @@ startothers(void)
   code = p2v(0x7000);
   memmove(code, _binary_entryother_start, (uint)_binary_entryother_size);
 
+  // iterate ALL CPUS
   for(c = cpus; c < cpus+ncpu; c++){
     if(c == cpus+cpunum())  // We've started already.
       continue;
@@ -179,6 +186,7 @@ startothers(void)
     *(void**)(code-8) = mpenter;
     *(int**)(code-12) = (void *) v2p(entrypgdir);
 
+    // start another processor running entry code at addr
     lapicstartap(c->id, v2p(code));
 
     // wait for cpu to finish mpmain()

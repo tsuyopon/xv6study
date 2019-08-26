@@ -80,6 +80,7 @@ lgdt(struct segdesc *p, int size)
 
 struct gatedesc;
 
+// lidt命令は割り込みベクターを登録するための命令です。
 static inline void
 lidt(struct gatedesc *p, int size)  // lidt = Load Intterupt Descripter Table
 {
@@ -92,6 +93,7 @@ lidt(struct gatedesc *p, int size)  // lidt = Load Intterupt Descripter Table
   asm volatile("lidt (%0)" : : "r" (pd));
 }
 
+// LTR命令はTSSをセットするCPU命令
 static inline void
 ltr(ushort sel)
 {
@@ -113,7 +115,7 @@ loadgs(ushort v)
 }
 
 // EFLAGSのIFフラグを0にする 
-// IFフラグは割り込み禁止フラグ。割り込みを禁止したい場合にセットする
+// IF(Interrupt enable Flag)フラグは割り込み禁止フラグ。割り込みを禁止したい場合にセットする
 static inline void
 cli(void)
 {
@@ -122,6 +124,7 @@ cli(void)
 
 // EFLAGSのIFフラグを1にする 
 // IFフラグは割り込み可能フラグ。割り込みを有効化したい場合にセットする。
+// CPUはマスク可能な外部からのハードウェア割り込みに応答するようになる。NMIには影響しない。
 static inline void
 sti(void)
 {
