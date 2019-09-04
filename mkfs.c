@@ -170,6 +170,7 @@ wsect(uint sec, void *buf)
   }
 }
 
+// inodeをブロックへと変換
 uint
 i2b(uint inum)
 {

@@ -61,6 +61,7 @@ initlog(void)
   log.start = sb.size - sb.nlog;
   log.size = sb.nlog;
   log.dev = ROOTDEV;
+  // ここでloggingのリカバリー処理を行なう(起動時に実施される)
   recover_from_log();
 }
 
@@ -80,13 +81,19 @@ install_trans(void)
   }
 }
 
+// この関数はリカバリー時にしか呼ばれない
 // Read the log header from disk into the in-memory log header
 static void
 read_head(void)
 {
+  // log.startはlogの開始位置を表す。
   struct buf *buf = bread(log.dev, log.start);
+
+  // logのブロックはlogheader構造体で
   struct logheader *lh = (struct logheader *) (buf->data);
   int i;
+
+  // グローバル変数に書き込みを行う
   log.lh.n = lh->n;
   for (i = 0; i < log.lh.n; i++) {
     log.lh.sector[i] = lh->sector[i];
@@ -97,6 +104,8 @@ read_head(void)
 // Write in-memory log header to disk.
 // This is the true point at which the
 // current transaction commits.
+// メモリ中に存在するlogheader構造体をディスクに書き出す。
+// logheader構造体はファイルシステム中のboot, superの次のlogブロック(log.start)の位置に存在する
 static void
 write_head(void)
 {
@@ -126,13 +135,13 @@ begin_op(void)
 {
   acquire(&log.lock);
   while(1){
-    if(log.committing){
+    if(log.committing){        // 書き込み中なのでsleepする 
       sleep(&log, &log.lock);
-    } else if(log.lh.n + (log.outstanding+1)*MAXOPBLOCKS > LOGSIZE){
+    } else if(log.lh.n + (log.outstanding+1)*MAXOPBLOCKS > LOGSIZE){  // ログスペース利用超過の場合にもsleep
       // this op might exhaust log space; wait for commit.
       sleep(&log, &log.lock);
     } else {
-      log.outstanding += 1;
+      log.outstanding += 1;   // 実行されているファイルシステムのシステムコール数を保存する
       release(&log.lock);
       break;
     }
@@ -148,9 +157,9 @@ end_op(void)
 
   acquire(&log.lock);
   log.outstanding -= 1;
-  if(log.committing)
+  if(log.committing)            // 終了操作で書き込み中となっているのはおかしいのでpanic扱いとする。
     panic("log.committing");
-  if(log.outstanding == 0){
+  if(log.outstanding == 0){     // 実行されているファイルシステムのシステムコールが存在しないことを確認した上でdo_commitフラグを立てる。 
     do_commit = 1;
     log.committing = 1;
   } else {
@@ -177,7 +186,7 @@ write_log(void)
   int tail;
 
   for (tail = 0; tail < log.lh.n; tail++) {
-    struct buf *to = bread(log.dev, log.start+tail+1); // log block
+    struct buf *to = bread(log.dev, log.start+tail+1);      // log block  log.startはログヘッダなので、log.start+1は0番目のログブロックに対応する
     struct buf *from = bread(log.dev, log.lh.sector[tail]); // cache block
     memmove(to->data, from->data, BSIZE);
     bwrite(to);  // write the log
@@ -186,14 +195,25 @@ write_log(void)
   }
 }
 
+
+// commit処理を行う
+// ジャーナリングファイルシステムのcommitはデータを２度書き込みする必要があるので注意すること
 static void
 commit()
 {
   if (log.lh.n > 0) {
+    // １度目のデータ書き込み(ジャーナルへ書き込み)
     write_log();     // Write modified blocks from cache to log
+
+    // ファイルシステムの３番目のlog領域にlogheader構造体(書き込みするブロック数とそれらが位置するセクター番号)が記録される
     write_head();    // Write header to disk -- the real commit
+
+    // ジャーナルにあるデータを実際にディスクに書き込み(2度目の書き込み)
     install_trans(); // Now install writes to home locations
+
+    // 書き込みブロック数をリセットする。これは次のwrite_head()を呼び出した際に必要
     log.lh.n = 0; 
+
     write_head();    // Erase the transaction from the log
   }
 }
@@ -217,11 +237,16 @@ log_write(struct buf *b)
   if (log.outstanding < 1)
     panic("log_write outside of trans");
 
+  // バッファ中のセクター番号とログに記録セクター番号が一致していたら、その時点でbreakする
+  // 一致しなければ、i == log.lh.nとなる (***)
   for (i = 0; i < log.lh.n; i++) {
     if (log.lh.sector[i] == b->sector)   // log absorbtion
       break;
   }
   log.lh.sector[i] = b->sector;
+
+  // (***)で一致しない状態なので、書き込みするバッファが増えるのでインクリメントする。
+  // このlog.lh.n++は書き込まれるとcommit()で0に変更される
   if (i == log.lh.n)
     log.lh.n++;
   b->flags |= B_DIRTY; // prevent eviction

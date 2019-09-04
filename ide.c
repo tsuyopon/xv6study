@@ -138,7 +138,7 @@ ideintr(void)
 
   // Read data if needed.
   if(!(b->flags & B_DIRTY) && idewait(1) >= 0)
-    insl(0x1f0, b->data, 512/4);
+    insl(0x1f0, b->data, 512/4);   // 必要あればディスクからデータ読み込みのために512/4回ループする 
   
   // Wake process waiting for this buf.
   b->flags |= B_VALID;
